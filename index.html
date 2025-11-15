@@ -16,24 +16,25 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
+      justify-content: center;     /* 세로 가운데로 */
+      align-items: center;         /* 가로 가운데로 */
       font-family: system-ui, sans-serif;
     }
     #gameCanvas {
-      margin-top: 10px;
       background: #fff;
       border-radius: 10px;
       border: 2px solid #333;
-      width: 95vw;         /* 화면 너비 거의 전체 */
-      height: 50vh;        /* 화면 세로 절반 차지 */
-      max-height: 380px;   /* 과도하게 커지지 않도록 제한 */
+      width: 100vw;               /* 가로 꽉 채우기 */
+      max-width: 900px;
+      height: 75vh;               /* 세로 75% 사용 */
+      max-height: 650px;          /* 너무 커지는 것 방지 */
       touch-action: none;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
     }
     #hint {
       color: #ccc;
-      margin-top: 8px;
-      font-size: 14px;
+      margin-top: 6px;
+      font-size: 13px;
       text-align: center;
       line-height: 1.4em;
     }
@@ -52,7 +53,7 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    /* ---------- 고정 FPS 적용 (카카오톡 속도 문제 해결) ---------- */
+    /* ---------- 고정 FPS ---------- */
     const FPS = 60;
     const FRAME_DURATION = 1000 / FPS;
     let lastFrameTime = 0;
@@ -67,59 +68,61 @@
       width: 30,
       height: 40,
       vy: 0,
-      jumpPower: -9,
-      doubleJumpPower: -8,
+      jumpPower: -8.5,
+      doubleJumpPower: -7.5,
       gravity: 0.35,
       jumpCount: 0,
-      maxJumps: 2
+      maxJumps: 2,
     };
 
     const obstacles = [];
     let spawnTimer = 0;
-    let spawnRate = 1400;
+    let spawnRate = 1800;   // 더 느긋하게: 장애물 나오기 간격 ↑
     let score = 0;
     let bestScore = 0;
 
-    /* 최고점 저장 */
     try {
       bestScore = parseInt(localStorage.getItem("jump_best") || "0");
     } catch {}
 
-    /* 점프 */
     function jump() {
-      if (gameState === "ready") { gameState = "playing"; return; }
-      if (gameState === "gameover") { resetGame(); return; }
+      if (gameState === "ready") {
+        gameState = "playing";
+      }
 
-      if (player.jumpCount < player.maxJumps) {
-        player.vy = player.jumpCount === 0 ? player.jumpPower : player.doubleJumpPower;
+      if (gameState === "gameover") {
+        resetGame();
+        return;
+      }
+
+      if (player.jumpCount < player.maxJumps && gameState === "playing") {
+        player.vy = (player.jumpCount === 0) ? player.jumpPower : player.doubleJumpPower;
         player.jumpCount++;
       }
     }
 
-    /* 게임 리셋 */
     function resetGame() {
       obstacles.length = 0;
       player.y = groundY - player.height;
       player.vy = 0;
       player.jumpCount = 0;
-      gameState = "playing";
       score = 0;
-      spawnRate = 1400;
+      spawnTimer = 0;
+      spawnRate = 1800;
+      gameState = "playing";
     }
 
-    /* 장애물 생성 */
     function spawnObstacle() {
-      const isTall = Math.random() > 0.6;
+      const isTall = Math.random() > 0.7; // 큰 장애물 비율 ↓
       obstacles.push({
         x: canvas.width + 20,
         width: isTall ? 30 : 25,
         height: isTall ? 70 : 30,
         y: groundY - (isTall ? 70 : 30),
-        speed: 4.3
+        speed: 3.5, // 속도 ↓
       });
     }
 
-    /* 업데이트 */
     function update() {
       if (gameState !== "playing") return;
 
@@ -127,18 +130,19 @@
       player.vy += player.gravity;
       player.y += player.vy;
 
-      // 바닥 충돌
+      // 바닥
       if (player.y + player.height >= groundY) {
         player.y = groundY - player.height;
         player.vy = 0;
         player.jumpCount = 0;
       }
 
-      // 장애물 이동 & 점수
+      // 장애물 이동
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
         o.x -= o.speed;
 
+        // 화면 밖으로 나가면 점수 증가
         if (o.x + o.width < 0) {
           obstacles.splice(i, 1);
           score++;
@@ -148,7 +152,7 @@
           }
         }
 
-        // 충돌
+        // 충돌 체크
         if (
           player.x < o.x + o.width &&
           player.x + player.width > o.x &&
@@ -159,17 +163,20 @@
         }
       }
 
-      // 장애물 스폰
+      // 장애물 생성 타이머
       spawnTimer += FRAME_DURATION;
-      if (spawnTimer > spawnRate) {
+      if (spawnTimer >= spawnRate) {
         spawnTimer = 0;
         spawnObstacle();
       }
     }
 
-    /* 그리기 */
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 배경
+      ctx.fillStyle = "#e0e0e0";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // 바닥
       ctx.strokeStyle = "#666";
@@ -179,22 +186,24 @@
       ctx.stroke();
 
       // 플레이어
-      ctx.fillStyle = "#333";
+      ctx.fillStyle = "#111";
       ctx.fillRect(player.x, player.y, player.width, player.height);
 
       // 장애물
       for (const o of obstacles) {
-        ctx.fillStyle = o.height > 40 ? "#c62828" : "#2e7d32";
+        ctx.fillStyle = o.height > 40 ? "#2e7d32" : "#1565c0";
         ctx.fillRect(o.x, o.y, o.width, o.height);
       }
 
       // 점수
-      ctx.fillStyle = "#222";
+      ctx.fillStyle = "#000";
       ctx.font = "16px system-ui";
+      ctx.textAlign = "left";
       ctx.fillText(`Score: ${score}`, 10, 20);
-      ctx.fillText(`Best: ${bestScore}`, canvas.width - 90, 20);
+      ctx.textAlign = "right";
+      ctx.fillText(`Best: ${bestScore}`, canvas.width - 10, 20);
+      ctx.textAlign = "start";
 
-      // 상태 오버레이
       if (gameState === "ready") {
         overlay("JUMP GAME", "탭 / 스페이스로 시작");
       } else if (gameState === "gameover") {
@@ -213,11 +222,9 @@
 
       ctx.font = "16px system-ui";
       ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 20);
-
       ctx.textAlign = "start";
     }
 
-    /* 메인 루프 (고정 FPS) */
     function loop(timestamp) {
       if (timestamp - lastFrameTime >= FRAME_DURATION) {
         update();
@@ -228,15 +235,27 @@
     }
     requestAnimationFrame(loop);
 
-    /* 입력 */
-    canvas.addEventListener("touchstart", jump, { passive: false });
+    // 입력 처리
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      jump();
+    }, { passive: false });
+
     canvas.addEventListener("mousedown", jump);
+
     window.addEventListener("keydown", (e) => {
-      if (["Space", "ArrowUp"].includes(e.code)) jump();
-      if (e.code === "KeyR" && gameState === "gameover") resetGame();
+      if (["Space", "ArrowUp"].includes(e.code)) {
+        e.preventDefault();
+        jump();
+      }
+      if (e.code === "KeyR" && gameState === "gameover") {
+        resetGame();
+      }
     });
   </script>
 
 </body>
 </html>
+
+
 
