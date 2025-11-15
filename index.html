@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jump Game (Mobile)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      color: #fff;
+    }
+    #gameWrapper {
+      width: 100%;
+      max-width: 900px;
+      padding: 10px;
+      text-align: center;
+    }
+    canvas {
+      background: #ffffff;
+      border: 2px solid #333;
+      display: block;
+      margin: 0 auto 10px;
+      width: 100%;      /* 화면 너비에 맞게 */
+      height: auto;     /* 비율 유지 */
+      touch-action: none; /* 터치 시 스크롤 방지 */
+    }
+    #hint {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div id="gameWrapper">
+    <canvas id="game" width="800" height="200"></canvas>
+    <div id="hint">
+      📱 화면을 터치하면 점프 (최대 2단)<br/>
+      ⌨️ PC에서는 Space / ↑, R = 다시 시작
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const groundY = canvas.height - 40;
+
+    const player = {
+      x: 50,
+      y: groundY - 40,
+      width: 30,
+      height: 40,
+      vy: 0,
+      jumpPower: -9,
+      doubleJumpPower: -8,
+      gravity: 0.4,
+      onGround: true,
+      jumpCount: 0,
+      maxJumps: 2,
+    };
+
+    const obstacles = [];
+    let lastSpawn = 0;
+    let spawnInterval = 1500; // ms
+
+    let score = 0;
+    let gameOver = false;
+    let lastTime = 0;
+
+    function resetGame() {
+      obstacles.length = 0;
+      score = 0;
+      gameOver = false;
+
+      player.y = groundY - player.height;
+      player.vy = 0;
+      player.onGround = true;
+      player.jumpCount = 0;
+
+      lastSpawn = 0;
+      lastTime = 0;
+      spawnInterval = 1500;
+      requestAnimationFrame(loop);
+    }
+
+    function spawnObstacle() {
+      const r = Math.random();
+      let type = r < 0.6 ? "low" : "tall";
+
+      const obstacle = {
+        x: canvas.width,
+        type,
+        speed: 5,
+      };
+
+      if (type === "low") {
+        obstacle.width = 25;
+        obstacle.height = 30;
+      } else {
+        obstacle.width = 30;
+        obstacle.height = 70;
+      }
+
+      obstacle.y = groundY - obstacle.height;
+      obstacles.push(obstacle);
+    }
+
+    function update(dt) {
+      if (gameOver) return;
+
+      player.vy += player.gravity;
+      player.y += player.vy;
+
+      if (player.y + player.height >= groundY) {
+        player.y = groundY - player.height;
+        player.vy = 0;
+        player.onGround = true;
+        player.jumpCount = 0;
+      } else {
+        player.onGround = false;
+      }
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const o = obstacles[i];
+        o.x -= o.speed;
+
+        if (o.x + o.width < 0) {
+          obstacles.splice(i, 1);
+          score++;
+          if (spawnInterval > 800) spawnInterval -= 20;
+        }
+      }
+
+      lastSpawn += dt;
+      if (lastSpawn >= spawnInterval) {
+        spawnObstacle();
+        lastSpawn = 0;
+      }
+
+      for (const o of obstacles) {
+        if (
+          player.x < o.x + o.width &&
+          player.x + player.width > o.x &&
+          player.y < o.y + o.height &&
+          player.y + player.height > o.y
+        ) {
+          gameOver = true;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = "#555";
+      ctx.beginPath();
+      ctx.moveTo(0, groundY + 0.5);
+      ctx.lineTo(canvas.width, groundY + 0.5);
+      ctx.stroke();
+
+      ctx.fillStyle = "#333";
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+
+      for (const o of obstacles) {
+        ctx.fillStyle = o.type === "low" ? "#2e7d32" : "#c62828";
+        ctx.fillRect(o.x, o.y, o.width, o.height);
+      }
+
+      ctx.fillStyle = "#000";
+      ctx.font = "16px system-ui";
+      ctx.fillText("Score: " + score, 10, 20);
+
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.6)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "28px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "18px system-ui";
+        ctx.fillText(
+          "Score: " + score + "  |  R 또는 탭으로 다시 시작",
+          canvas.width / 2,
+          canvas.height / 2 + 20
+        );
+        ctx.textAlign = "start";
+      }
+    }
+
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      update(dt);
+      draw();
+
+      if (!gameOver) {
+        requestAnimationFrame(loop);
+      }
+    }
+
+    function doJump() {
+      if (gameOver) {
+        resetGame();
+        return;
+      }
+      if (player.jumpCount < player.maxJumps) {
+        if (player.jumpCount === 0) {
+          player.vy = player.jumpPower;
+        } else {
+          player.vy = player.doubleJumpPower;
+        }
+        player.onGround = false;
+        player.jumpCount++;
+      }
+    }
+
+    // 키보드 조작
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space" || e.code === "ArrowUp") {
+        doJump();
+      }
+      if (e.code === "KeyR" && gameOver) {
+        resetGame();
+      }
+    });
+
+    // 터치/클릭 조작 (모바일용)
+    function handlePointer() {
+      doJump();
+    }
+
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      handlePointer();
+    }, { passive: false });
+
+    canvas.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      handlePointer();
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
