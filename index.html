@@ -21,19 +21,23 @@
       font-family: system-ui, sans-serif;
     }
     #gameCanvas {
-      background: #f5f5f5;
-      border-radius: 12px;
-      border: 2px solid #222;
-      width: 100vw;          /* 가로 꽉 채우기 */
-      max-width: 900px;
-      height: 75vh;          /* 세로 꽤 크게 */
-      max-height: 650px;
-      touch-action: none;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.5);
-      /* 확대 시 흐릿해지는 거 방지 */
-      image-rendering: crisp-edges;
-      image-rendering: pixelated;
-    }
+  background: #f5f5f5;
+  border-radius: 12px;
+  border: 2px solid #222;
+
+  /* 가로 기준으로만 키우고, 세로는 비율대로 자동 */
+  width: 100vw;          /* 화면 가로 꽉 채우기 */
+  max-width: 900px;
+  height: auto;          /* ← 세로는 자동으로 */
+  aspect-ratio: 1000 / 320;  /* 내부 해상도 비율 그대로 유지 */
+
+  touch-action: none;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+
+  /* 도트 느낌 유지 */
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
     #hint {
       color: #ddd;
       margin-top: 6px;
@@ -278,6 +282,7 @@
 
 </body>
 </html>
+
 
 
 
