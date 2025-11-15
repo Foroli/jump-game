@@ -16,23 +16,26 @@
       height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: center;     /* 세로 가운데로 */
-      align-items: center;         /* 가로 가운데로 */
+      justify-content: center;
+      align-items: center;
       font-family: system-ui, sans-serif;
     }
     #gameCanvas {
-      background: #fff;
-      border-radius: 10px;
-      border: 2px solid #333;
-      width: 100vw;               /* 가로 꽉 채우기 */
+      background: #f5f5f5;
+      border-radius: 12px;
+      border: 2px solid #222;
+      width: 100vw;          /* 가로 꽉 채우기 */
       max-width: 900px;
-      height: 75vh;               /* 세로 75% 사용 */
-      max-height: 650px;          /* 너무 커지는 것 방지 */
+      height: 75vh;          /* 세로 꽤 크게 */
+      max-height: 650px;
       touch-action: none;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+      /* 확대 시 흐릿해지는 거 방지 */
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
     }
     #hint {
-      color: #ccc;
+      color: #ddd;
       margin-top: 6px;
       font-size: 13px;
       text-align: center;
@@ -42,10 +45,11 @@
 </head>
 <body>
 
-  <canvas id="gameCanvas" width="800" height="260"></canvas>
+  <!-- 내부 해상도 크게 (더 선명하게) -->
+  <canvas id="gameCanvas" width="1000" height="320"></canvas>
 
   <div id="hint">
-    📱 탭하면 점프 (2단 가능)<br>
+    📱 탭하면 점프 (2단 가능)<br />
     ⌨️ Space / ↑ , R = 다시 시작
   </div>
 
@@ -59,25 +63,25 @@
     let lastFrameTime = 0;
 
     /* ---------- 게임 설정 ---------- */
-    const groundY = canvas.height - 40;
+    const groundY = canvas.height - 50; // 살짝 위로
     let gameState = "ready"; // ready, playing, gameover
 
     const player = {
-      x: 60,
+      x: 80,
       y: groundY - 40,
-      width: 30,
+      width: 32,
       height: 40,
       vy: 0,
-      jumpPower: -8.5,
-      doubleJumpPower: -7.5,
-      gravity: 0.35,
+      jumpPower: -9.2,
+      doubleJumpPower: -8.2,
+      gravity: 0.4,
       jumpCount: 0,
       maxJumps: 2,
     };
 
     const obstacles = [];
     let spawnTimer = 0;
-    let spawnRate = 1800;   // 더 느긋하게: 장애물 나오기 간격 ↑
+    let spawnRate = 1500;   // 조금 더 자주 장애물 등장
     let score = 0;
     let bestScore = 0;
 
@@ -108,25 +112,33 @@
       player.jumpCount = 0;
       score = 0;
       spawnTimer = 0;
-      spawnRate = 1800;
+      spawnRate = 1500;
       gameState = "playing";
     }
 
     function spawnObstacle() {
-      const isTall = Math.random() > 0.7; // 큰 장애물 비율 ↓
+      const r = Math.random();
+      const isTall = r > 0.5; // 큰 장애물 비율 50%
+
+      // 긴 막대 = 높이 확 올려서 싱글 점프로는 넘지 못하게
+      const lowHeight = 35;
+      const tallHeight = 110;  // <- 핵심: 싱글 점프보다 높게
+
+      const height = isTall ? tallHeight : lowHeight;
+
       obstacles.push({
-        x: canvas.width + 20,
-        width: isTall ? 30 : 25,
-        height: isTall ? 70 : 30,
-        y: groundY - (isTall ? 70 : 30),
-        speed: 3.5, // 속도 ↓
+        x: canvas.width + 40,
+        width: isTall ? 40 : 28,
+        height,
+        y: groundY - height,
+        speed: 4.6, // 이전보다 살짝 빠르게
       });
     }
 
     function update() {
       if (gameState !== "playing") return;
 
-      // 중력
+      // 플레이어 물리
       player.vy += player.gravity;
       player.y += player.vy;
 
@@ -142,10 +154,15 @@
         const o = obstacles[i];
         o.x -= o.speed;
 
-        // 화면 밖으로 나가면 점수 증가
+        // 화면 밖 → 점수
         if (o.x + o.width < 0) {
           obstacles.splice(i, 1);
           score++;
+
+          // 점수에 따라 난이도 조금씩 상승
+          if (score % 5 === 0 && spawnRate > 900) {
+            spawnRate -= 80;
+          }
           if (score > bestScore) {
             bestScore = score;
             localStorage.setItem("jump_best", bestScore);
@@ -180,32 +197,38 @@
 
       // 바닥
       ctx.strokeStyle = "#666";
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(0, groundY);
       ctx.lineTo(canvas.width, groundY);
       ctx.stroke();
 
-      // 플레이어
+      // 플레이어 (간단 캐릭터)
       ctx.fillStyle = "#111";
       ctx.fillRect(player.x, player.y, player.width, player.height);
+      ctx.fillStyle = "#fafafa";
+      ctx.fillRect(player.x + 6, player.y + 6, player.width - 12, 16); // 얼굴
+      ctx.fillStyle = "#111";
+      ctx.fillRect(player.x + 11, player.y + 11, 3, 3);
+      ctx.fillRect(player.x + 19, player.y + 11, 3, 3);
 
       // 장애물
       for (const o of obstacles) {
-        ctx.fillStyle = o.height > 40 ? "#2e7d32" : "#1565c0";
+        ctx.fillStyle = o.height > 60 ? "#d32f2f" : "#388e3c"; // 큰 막대는 빨간색
         ctx.fillRect(o.x, o.y, o.width, o.height);
       }
 
-      // 점수
+      // 점수 표시
       ctx.fillStyle = "#000";
       ctx.font = "16px system-ui";
       ctx.textAlign = "left";
-      ctx.fillText(`Score: ${score}`, 10, 20);
+      ctx.fillText(`Score: ${score}`, 12, 24);
       ctx.textAlign = "right";
-      ctx.fillText(`Best: ${bestScore}`, canvas.width - 10, 20);
+      ctx.fillText(`Best: ${bestScore}`, canvas.width - 12, 24);
       ctx.textAlign = "start";
 
       if (gameState === "ready") {
-        overlay("JUMP GAME", "탭 / 스페이스로 시작");
+        overlay("JUMP GAME", "탭 / Space 키로 시작");
       } else if (gameState === "gameover") {
         overlay("GAME OVER", "탭 또는 R 키로 다시 시작");
       }
@@ -219,7 +242,6 @@
       ctx.font = "22px system-ui";
       ctx.textAlign = "center";
       ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 10);
-
       ctx.font = "16px system-ui";
       ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 20);
       ctx.textAlign = "start";
@@ -235,7 +257,7 @@
     }
     requestAnimationFrame(loop);
 
-    // 입력 처리
+    // 입력
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       jump();
@@ -256,6 +278,8 @@
 
 </body>
 </html>
+
+
 
 
 
