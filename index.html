@@ -2,48 +2,54 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>Jump Game (Mobile)</title>
+  <!-- 모바일 화면에 맞게 꽉 차게 보이도록 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Jump Game</title>
   <style>
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      background: #222;
+      margin: 0;
+      height: 100vh;
+      background: #111;
       display: flex;
       justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      font-family: system-ui, sans-serif;
+      align-items: flex-start; /* 위쪽에 붙게 */
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       color: #fff;
     }
     #gameWrapper {
       width: 100%;
       max-width: 900px;
-      padding: 10px;
+      padding: 8px 8px 16px;
       text-align: center;
     }
     canvas {
       background: #ffffff;
       border: 2px solid #333;
+      border-radius: 10px;
       display: block;
-      margin: 0 auto 10px;
-      width: 100%;      /* 화면 너비에 맞게 */
-      height: auto;     /* 비율 유지 */
-      touch-action: none; /* 터치 시 스크롤 방지 */
+      margin: 0 auto 8px;
+      /* 화면 너비에 맞게 키우기 */
+      width: 100%;
+      height: auto;
+      touch-action: none;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
     }
     #hint {
-      font-size: 14px;
+      font-size: 13px;
       opacity: 0.9;
     }
   </style>
 </head>
 <body>
   <div id="gameWrapper">
-    <canvas id="game" width="800" height="200"></canvas>
+    <!-- 높이를 200 → 260으로 살짝 키움 -->
+    <canvas id="game" width="800" height="260"></canvas>
     <div id="hint">
-      📱 화면을 터치하면 점프 (최대 2단)<br/>
+      📱 화면을 탭하면 점프 (최대 2단)<br />
       ⌨️ PC에서는 Space / ↑, R = 다시 시작
     </div>
   </div>
@@ -54,8 +60,11 @@
 
     const groundY = canvas.height - 40;
 
+    // 게임 상태
+    let gameState = "ready"; // ready, playing, gameover
+
     const player = {
-      x: 50,
+      x: 60,
       y: groundY - 40,
       width: 30,
       height: 40,
@@ -71,15 +80,25 @@
     const obstacles = [];
     let lastSpawn = 0;
     let spawnInterval = 1500; // ms
-
     let score = 0;
-    let gameOver = false;
+    let bestScore = 0;
     let lastTime = 0;
 
-    function resetGame() {
+    // 최고 점수 저장
+    try {
+      const saved = localStorage.getItem("jump_game_best");
+      if (saved) bestScore = parseInt(saved, 10) || 0;
+    } catch (e) {}
+
+    function saveBestScore() {
+      try {
+        localStorage.setItem("jump_game_best", String(bestScore));
+      } catch (e) {}
+    }
+
+    function resetGame(fullReset = false) {
       obstacles.length = 0;
       score = 0;
-      gameOver = false;
 
       player.y = groundY - player.height;
       player.vy = 0;
@@ -89,15 +108,17 @@
       lastSpawn = 0;
       lastTime = 0;
       spawnInterval = 1500;
+
+      gameState = fullReset ? "ready" : "playing";
       requestAnimationFrame(loop);
     }
 
     function spawnObstacle() {
       const r = Math.random();
-      let type = r < 0.6 ? "low" : "tall";
+      const type = r < 0.6 ? "low" : "tall";
 
       const obstacle = {
-        x: canvas.width,
+        x: canvas.width + 20,
         type,
         speed: 5,
       };
@@ -115,11 +136,13 @@
     }
 
     function update(dt) {
-      if (gameOver) return;
+      if (gameState !== "playing") return;
 
+      // 중력
       player.vy += player.gravity;
       player.y += player.vy;
 
+      // 바닥
       if (player.y + player.height >= groundY) {
         player.y = groundY - player.height;
         player.vy = 0;
@@ -129,6 +152,7 @@
         player.onGround = false;
       }
 
+      // 장애물 이동
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
         o.x -= o.speed;
@@ -136,16 +160,22 @@
         if (o.x + o.width < 0) {
           obstacles.splice(i, 1);
           score++;
-          if (spawnInterval > 800) spawnInterval -= 20;
+          if (spawnInterval > 850) spawnInterval -= 18;
+          if (score > bestScore) {
+            bestScore = score;
+            saveBestScore();
+          }
         }
       }
 
+      // 스폰
       lastSpawn += dt;
       if (lastSpawn >= spawnInterval) {
         spawnObstacle();
         lastSpawn = 0;
       }
 
+      // 충돌
       for (const o of obstacles) {
         if (
           player.x < o.x + o.width &&
@@ -153,7 +183,8 @@
           player.y < o.y + o.height &&
           player.y + player.height > o.y
         ) {
-          gameOver = true;
+          gameState = "gameover";
+          break;
         }
       }
     }
@@ -161,38 +192,58 @@
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // 배경(바닥/라인)
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       ctx.strokeStyle = "#555";
       ctx.beginPath();
       ctx.moveTo(0, groundY + 0.5);
       ctx.lineTo(canvas.width, groundY + 0.5);
       ctx.stroke();
 
+      // 플레이어
       ctx.fillStyle = "#333";
       ctx.fillRect(player.x, player.y, player.width, player.height);
 
+      // 장애물
       for (const o of obstacles) {
         ctx.fillStyle = o.type === "low" ? "#2e7d32" : "#c62828";
         ctx.fillRect(o.x, o.y, o.width, o.height);
       }
 
+      // 점수 / 최고 점수
       ctx.fillStyle = "#000";
       ctx.font = "16px system-ui";
-      ctx.fillText("Score: " + score, 10, 20);
+      ctx.textAlign = "left";
+      ctx.fillText("Score: " + score, 10, 22);
+      ctx.textAlign = "right";
+      ctx.fillText("Best: " + bestScore, canvas.width - 10, 22);
+      ctx.textAlign = "start";
 
-      if (gameOver) {
+      // 상태 오버레이
+      if (gameState === "ready") {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.font = "24px system-ui";
+        ctx.fillText("JUMP GAME", canvas.width / 2, canvas.height / 2 - 16);
+        ctx.font = "16px system-ui";
+        ctx.fillText("화면 탭 / Space 키로 시작", canvas.width / 2, canvas.height / 2 + 10);
+        ctx.textAlign = "start";
+      } else if (gameState === "gameover") {
         ctx.fillStyle = "rgba(0,0,0,0.6)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#fff";
-        ctx.font = "28px system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
-        ctx.font = "18px system-ui";
-        ctx.fillText(
-          "Score: " + score + "  |  R 또는 탭으로 다시 시작",
-          canvas.width / 2,
-          canvas.height / 2 + 20
-        );
+        ctx.font = "24px system-ui";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 18);
+        ctx.font = "16px system-ui";
+        ctx.fillText(`Score: ${score}   |   Best: ${bestScore}`, canvas.width / 2, canvas.height / 2 + 4);
+        ctx.fillText("탭 또는 R 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 26);
         ctx.textAlign = "start";
       }
     }
@@ -205,17 +256,18 @@
       update(dt);
       draw();
 
-      if (!gameOver) {
-        requestAnimationFrame(loop);
-      }
+      requestAnimationFrame(loop);
     }
 
     function doJump() {
-      if (gameOver) {
-        resetGame();
+      if (gameState === "ready") {
+        gameState = "playing";
+      } else if (gameState === "gameover") {
+        resetGame(false);
         return;
       }
-      if (player.jumpCount < player.maxJumps) {
+
+      if (player.jumpCount < player.maxJumps && gameState === "playing") {
         if (player.jumpCount === 0) {
           player.vy = player.jumpPower;
         } else {
@@ -226,32 +278,42 @@
       }
     }
 
-    // 키보드 조작
+    // 키보드 입력
     window.addEventListener("keydown", (e) => {
       if (e.code === "Space" || e.code === "ArrowUp") {
+        e.preventDefault();
         doJump();
       }
-      if (e.code === "KeyR" && gameOver) {
-        resetGame();
+      if (e.code === "KeyR") {
+        if (gameState === "gameover") {
+          resetGame(false);
+        } else {
+          resetGame(true);
+        }
       }
     });
 
-    // 터치/클릭 조작 (모바일용)
-    function handlePointer() {
+    // 터치/클릭 입력
+    function handlePointer(e) {
+      e.preventDefault();
       doJump();
     }
 
-    canvas.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      handlePointer();
-    }, { passive: false });
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        handlePointer(e);
+      },
+      { passive: false }
+    );
 
     canvas.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      handlePointer();
+      handlePointer(e);
     });
 
-    resetGame();
+    // 시작
+    resetGame(true);
+    requestAnimationFrame(loop);
   </script>
 </body>
 </html>
