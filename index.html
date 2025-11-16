@@ -23,7 +23,7 @@
       width: 100%;
       max-width: 900px;
       text-align: center;
-      padding-top: 70px; /* 위 검은 여백 */
+      padding-top: 40px; /* 위 검은 여백 */
     }
     canvas {
       display: block;
@@ -32,7 +32,7 @@
       border-radius: 16px;
       border: 2px solid #222;
 
-      /* 🔥 여기가 실제로 보이는 크기(가로 기준) */
+      /* 🔥 실제 화면에 보이는 크기 */
       width: 95vw;        /* 화면 가로의 95% 사용 */
       max-width: 900px;   /* PC에서 너무 커지지 않게 */
       height: auto;       /* 비율 유지 → 안 찌그러짐 */
@@ -59,22 +59,22 @@
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    // 🔥 논리 해상도 자체를 납작하게 줄임 (예전: 800 x 260)
+    // 🔥 논리 해상도 (세로 크게 키움: 예전 150 → 260)
     canvas.width = 800;
-    canvas.height = 150;          // <= 세로를 확 줄였음
-    const groundY = canvas.height - 20;
+    canvas.height = 260;
+    const groundY = canvas.height - 30;  // 바닥 위치
 
     let gameState = "ready";      // ready, playing, gameover
 
     const player = {
       x: 60,
-      y: groundY - 24,
-      width: 16,
-      height: 24,
+      y: groundY - 32,
+      width: 20,
+      height: 32,
       vy: 0,
       gravity: 0.55,
-      jumpPower: -8.5,
-      doubleJumpPower: -7.5,
+      jumpPower: -9.0,
+      doubleJumpPower: -8.0,
       jumpCount: 0,
       maxJumps: 2,
     };
@@ -106,11 +106,12 @@
       const r = Math.random();
       const tall = r > 0.6;
 
-      const baseLowH = 22;   // 낮은 장애물 기본 높이
-      const baseTallH = 60;  // 높은 장애물 기본 높이
+      // 화면 커진 만큼 장애물도 살짝 키움
+      const baseLowH = 40;   // 낮은 장애물 기본 높이
+      const baseTallH = 110; // 높은 장애물 기본 높이
 
       const height = tall ? baseTallH : baseLowH;
-      const width  = tall ? 26 : 18;
+      const width  = tall ? 30 : 22;
 
       obstacles.push({
         x: canvas.width + 20,
@@ -182,27 +183,27 @@
       ctx.fillRect(px, py, w, h);
 
       ctx.fillStyle = "#f5f5f5";
-      ctx.fillRect(px + 3, py + 5, w - 6, 7);
+      ctx.fillRect(px + 4, py + 6, w - 8, 9);
 
       ctx.fillStyle = "#111";
-      ctx.fillRect(px + 5, py + 7, 2, 2);
-      ctx.fillRect(px + w - 7, py + 7, 2, 2);
+      ctx.fillRect(px + 6, py + 8, 2, 2);
+      ctx.fillRect(px + w - 8, py + 8, 2, 2);
     }
 
     function drawObstacles() {
       for (const o of obstacles) {
-        ctx.fillStyle = o.height > 40 ? "#b71c1c" : "#2e7d32";
+        ctx.fillStyle = o.height > 70 ? "#b71c1c" : "#2e7d32";
         ctx.fillRect(o.x, o.y, o.width, o.height);
       }
     }
 
     function drawUI() {
       ctx.fillStyle = "#000";
-      ctx.font = "14px system-ui";
+      ctx.font = "16px system-ui";
       ctx.textAlign = "left";
-      ctx.fillText("Score: " + score, 8, 18);
+      ctx.fillText("Score: " + score, 10, 22);
       ctx.textAlign = "right";
-      ctx.fillText("Best: " + bestScore, canvas.width - 8, 18);
+      ctx.fillText("Best: " + bestScore, canvas.width - 10, 22);
       ctx.textAlign = "start";
     }
 
@@ -223,20 +224,20 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.font = "20px system-ui";
-        ctx.fillText("JUMP GAME", canvas.width / 2, canvas.height / 2 - 8);
-        ctx.font = "13px system-ui";
-        ctx.fillText("화면 탭 / Space 키로 시작", canvas.width / 2, canvas.height / 2 + 12);
+        ctx.font = "22px system-ui";
+        ctx.fillText("JUMP GAME", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "14px system-ui";
+        ctx.fillText("화면 탭 / Space 키로 시작", canvas.width / 2, canvas.height / 2 + 14);
         ctx.textAlign = "start";
       } else if (gameState === "gameover") {
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#fff";
         ctx.textAlign = "center";
-        ctx.font = "20px system-ui";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 8);
-        ctx.font = "13px system-ui";
-        ctx.fillText("탭 또는 R 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 12);
+        ctx.font = "22px system-ui";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "14px system-ui";
+        ctx.fillText("탭 또는 R 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 14);
         ctx.textAlign = "start";
       }
     }
