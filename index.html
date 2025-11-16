@@ -23,7 +23,7 @@
       width: 100%;
       max-width: 900px;
       text-align: center;
-      padding-top: 200px;
+      padding-top: 900px;
     }
     canvas {
       display: block;
@@ -64,7 +64,7 @@
        - 지금: 600 x 360 (훨씬 높이 큼)
     */
     canvas.width  = 700;
-    canvas.height = 200;
+    canvas.height = 350;
     const groundY = canvas.height - 35;
 
     let gameState = "ready"; // ready, playing, gameover
@@ -110,8 +110,8 @@
       const tall = r > 0.6;
 
       // 화면 커진 만큼 적절히 키움
-      const baseLowH = 58;
-      const baseTallH = 100;
+      const baseLowH = 52;
+      const baseTallH = 85;
 
       const height = tall ? baseTallH : baseLowH;
       const width  = tall ? 30 : 22;
