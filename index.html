@@ -23,7 +23,7 @@
       width: 100%;
       max-width: 900px;
       text-align: center;
-      padding-top: 40px;
+      padding-top: 90px;
     }
     canvas {
       display: block;
@@ -63,21 +63,21 @@
        - 예전: 800 x 150 (엄청 납작)
        - 지금: 600 x 360 (훨씬 높이 큼)
     */
-    canvas.width  = 600;
-    canvas.height = 360;
-    const groundY = canvas.height - 40;
+    canvas.width  = 800;
+    canvas.height = 300;
+    const groundY = canvas.height - 35;
 
     let gameState = "ready"; // ready, playing, gameover
 
     const player = {
       x: 60,
-      y: groundY - 42,
-      width: 24,
-      height: 42,
+      y: groundY - 34,
+      width: 20,
+      height: 34,
       vy: 0,
       gravity: 0.55,
-      jumpPower: -9.5,
-      doubleJumpPower: -8.5,
+      jumpPower: -9.0,
+      doubleJumpPower: -8.0,
       jumpCount: 0,
       maxJumps: 2,
     };
@@ -110,11 +110,11 @@
       const tall = r > 0.6;
 
       // 화면 커진 만큼 적절히 키움
-      const baseLowH = 70;
-      const baseTallH = 160;
+      const baseLowH = 65;
+      const baseTallH = 100;
 
       const height = tall ? baseTallH : baseLowH;
-      const width  = tall ? 38 : 26;
+      const width  = tall ? 30 : 22;
 
       obstacles.push({
         x: canvas.width + 20,
