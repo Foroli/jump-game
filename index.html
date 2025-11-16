@@ -23,7 +23,7 @@
       width: 100%;
       max-width: 900px;
       text-align: center;
-      padding-top: 40px; /* 위 검은 여백 */
+      padding-top: 40px;
     }
     canvas {
       display: block;
@@ -32,10 +32,10 @@
       border-radius: 16px;
       border: 2px solid #222;
 
-      /* 🔥 실제 화면에 보이는 크기 */
-      width: 200vw;        /* 화면 가로의 95% 사용 */
-      max-width: 900px;   /* PC에서 너무 커지지 않게 */
-      height: auto;       /* 비율 유지 → 안 찌그러짐 */
+      /* 🔥 실제 화면 크기 (여기 때문에 커 보이게 됨) */
+      width: 95vw;        /* 150vw 절대 금지! 화면보다 크게 하지 말기 */
+      max-width: 600px;   /* PC에서 너무 커지지 않게 */
+      height: auto;       /* 비율 유지 */
 
       image-rendering: pixelated;
       image-rendering: crisp-edges;
@@ -59,29 +59,32 @@
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    // 🔥 논리 해상도 (세로 크게 키움: 예전 150 → 260)
-    canvas.width = 800;
-    canvas.height = 260;
-    const groundY = canvas.height - 30;  // 바닥 위치
+    /* 🔥 논리 해상도: 세로를 크게, 비율도 바꿈
+       - 예전: 800 x 150 (엄청 납작)
+       - 지금: 600 x 360 (훨씬 높이 큼)
+    */
+    canvas.width  = 600;
+    canvas.height = 360;
+    const groundY = canvas.height - 40;
 
-    let gameState = "ready";      // ready, playing, gameover
+    let gameState = "ready"; // ready, playing, gameover
 
     const player = {
       x: 60,
-      y: groundY - 32,
-      width: 20,
-      height: 32,
+      y: groundY - 42,
+      width: 24,
+      height: 42,
       vy: 0,
       gravity: 0.55,
-      jumpPower: -9.0,
-      doubleJumpPower: -8.0,
+      jumpPower: -9.5,
+      doubleJumpPower: -8.5,
       jumpCount: 0,
       maxJumps: 2,
     };
 
     const obstacles = [];
-    let spawnTimer = 0;           // ms
-    let spawnInterval = 1000;     // 장애물 생성 간격
+    let spawnTimer = 0;
+    let spawnInterval = 1000;
     let score = 0;
     let bestScore = 0;
     let lastTime = 0;
@@ -106,12 +109,12 @@
       const r = Math.random();
       const tall = r > 0.6;
 
-      // 화면 커진 만큼 장애물도 살짝 키움
-      const baseLowH = 40;   // 낮은 장애물 기본 높이
-      const baseTallH = 110; // 높은 장애물 기본 높이
+      // 화면 커진 만큼 적절히 키움
+      const baseLowH = 70;
+      const baseTallH = 160;
 
       const height = tall ? baseTallH : baseLowH;
-      const width  = tall ? 30 : 22;
+      const width  = tall ? 38 : 26;
 
       obstacles.push({
         x: canvas.width + 20,
@@ -125,9 +128,9 @@
     function update(deltaMs) {
       if (gameState !== "playing") return;
 
-      const dt = deltaMs / 16.67; // 프레임 단위로 변환 (60fps 기준)
+      const dt = deltaMs / 16.67; // 60fps 기준
 
-      // 플레이어 물리
+      // 플레이어
       player.vy += player.gravity * dt;
       player.y += player.vy * dt;
 
@@ -137,7 +140,7 @@
         player.jumpCount = 0;
       }
 
-      // 장애물 이동 + 충돌
+      // 장애물
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
         o.x -= o.speed * dt;
@@ -164,7 +167,7 @@
         }
       }
 
-      // 장애물 생성 타이머 (ms)
+      // 스폰
       spawnTimer += deltaMs;
       if (spawnTimer >= spawnInterval) {
         spawnTimer = 0;
@@ -183,16 +186,16 @@
       ctx.fillRect(px, py, w, h);
 
       ctx.fillStyle = "#f5f5f5";
-      ctx.fillRect(px + 4, py + 6, w - 8, 9);
+      ctx.fillRect(px + 5, py + 7, w - 10, 11);
 
       ctx.fillStyle = "#111";
-      ctx.fillRect(px + 6, py + 8, 2, 2);
-      ctx.fillRect(px + w - 8, py + 8, 2, 2);
+      ctx.fillRect(px + 8, py + 10, 2, 2);
+      ctx.fillRect(px + w - 10, py + 10, 2, 2);
     }
 
     function drawObstacles() {
       for (const o of obstacles) {
-        ctx.fillStyle = o.height > 70 ? "#b71c1c" : "#2e7d32";
+        ctx.fillStyle = o.height > 100 ? "#b71c1c" : "#2e7d32";
         ctx.fillRect(o.x, o.y, o.width, o.height);
       }
     }
@@ -201,9 +204,9 @@
       ctx.fillStyle = "#000";
       ctx.font = "16px system-ui";
       ctx.textAlign = "left";
-      ctx.fillText("Score: " + score, 10, 22);
+      ctx.fillText("Score: " + score, 10, 24);
       ctx.textAlign = "right";
-      ctx.fillText("Best: " + bestScore, canvas.width - 10, 22);
+      ctx.fillText("Best: " + bestScore, canvas.width - 10, 24);
       ctx.textAlign = "start";
     }
 
@@ -227,7 +230,7 @@
         ctx.font = "22px system-ui";
         ctx.fillText("JUMP GAME", canvas.width / 2, canvas.height / 2 - 10);
         ctx.font = "14px system-ui";
-        ctx.fillText("화면 탭 / Space 키로 시작", canvas.width / 2, canvas.height / 2 + 14);
+        ctx.fillText("화면 탭 / Space 키로 시작", canvas.width / 2, canvas.height / 2 + 16);
         ctx.textAlign = "start";
       } else if (gameState === "gameover") {
         ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -237,7 +240,7 @@
         ctx.font = "22px system-ui";
         ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
         ctx.font = "14px system-ui";
-        ctx.fillText("탭 또는 R 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 14);
+        ctx.fillText("탭 또는 R 키로 다시 시작", canvas.width / 2, canvas.height / 2 + 16);
         ctx.textAlign = "start";
       }
     }
@@ -245,7 +248,7 @@
     function loop(timestamp) {
       if (!lastTime) lastTime = timestamp;
       let delta = timestamp - lastTime;
-      if (delta > 50) delta = 50; // 렉 방지
+      if (delta > 50) delta = 50;
       lastTime = timestamp;
 
       update(delta);
